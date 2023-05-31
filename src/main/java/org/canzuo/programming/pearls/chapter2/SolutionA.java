@@ -1,11 +1,14 @@
 package org.canzuo.programming.pearls.chapter2;
 
+import java.io.BufferedInputStream;
 import java.util.*;
 
 /**
- * @ClassName SolutionA
+ * @ClassName SolutionA 无处不在的二分法
  * @Description Programming Pearls Ubiquitous Binary Search
- *              用二分法的思维解决问题
+ *              用二分法的思维解决，原问题是从40亿个数中找出不存在的数
+ *              要求内存使用在250MB以下，时间复杂度为2s以内，显然不能由位图数据结果解决
+ *              若干个外部文件倒是没有限制，会有大量IO读取文件的操作
  *
  * @Author canzuo
  * @Date 2023/3/31 20:36
@@ -13,18 +16,26 @@ import java.util.*;
  **/
 public class SolutionA {
     public static void main(String[] args) {
-        // Sample样例，位数为4，找出缺少道整数
-        int[] origin = new int[]{1,3,4,5,3,6,3,7,9,4,9,1,2,2,11,12,15,11,14,15};
+        // Sample样例，位数为4，找出缺少的正整数10
+         int[] samples = new int[]{1, 2, 4, 7, 8, 6, 6, 6, 9, 11, 13, 12, 15, 3, 10, 14};
 
-        // 读取40亿个32位整数，找出其中之一缺少道数
+        // 读取40亿个32位整数，找出其中之一缺少的数字
+        Scanner scanner = new Scanner(new BufferedInputStream(System.in));
+        List<Integer> inputList = new LinkedList<>();
 
-        System.out.println(getLostNum(origin, 4));
+        while(scanner.hasNext()) {
+            inputList.add(scanner.nextInt());
+        }
+
+        scanner.close();
+
+        int[] origin = inputList.stream().mapToInt(Integer::intValue).toArray();
+
+        System.out.println(getLostNum(origin, 16));
+
+        System.out.println(getDupNum(samples, 4));
     }
 
-
-    private static int getBit(int num, int bitSlot) {
-        return (num >> bitSlot) & 1;
-    }
 
     /**
      * 二分搜索并非是升序序列才能使用，可以根据数据的特性进行离散化的划分，对于无序的数组，求出不存在的数算法如下:
@@ -78,13 +89,71 @@ public class SolutionA {
 
             if (partOneIndex <= partTwoIndex) {
                 lostNum = lostNum | (1 << bitSlot);
-                arr = partOne.stream().mapToInt(num -> Integer.parseInt("" + num)).toArray();
+                arr = partOne.stream().mapToInt(Integer::intValue).toArray();
             } else {
-                arr = partTwo.stream().mapToInt(num -> Integer.parseInt("" + num)).toArray();
+                arr = partTwo.stream().mapToInt(Integer::intValue).toArray();
             }
 
         }
 
         return lostNum;
+    }
+
+    /**
+     * @Description: 给定一个4300 000 000个32位顺序排列的正整数，如何找出一个至少出现两次的整数
+     *               可以将问题缩小为65600个16位乱序排列的正整数，如何找出一个至少出现两次的整数
+     *               和找出不存在的数算法类似，通过二分法找出多的那个数，不管样本的数据是排序还是未排序，根据1和0进行二分
+     *               只不过不能用Set来去重，还有判断条件是partOneIndex > partTwoIndex才计算保留数字
+     * @author canzuo
+     *
+     * @param origin int
+     * @param bitSlot int
+     *
+     * @return int
+     */
+    protected static int getDupNum(int[] origin, int bitSlot) {
+        int dupNum = 0;
+        int[] arr = origin;
+
+        while (--bitSlot >= 0) {
+            int partOneIndex = 0;
+            int partTwoIndex = 0;
+            List<Integer> partOne = new LinkedList<>();
+            List<Integer> partTwo = new LinkedList<>();
+
+            for (int i = 0; i < arr.length; i++) {
+                if (getBit(arr[i], bitSlot) == 1) {
+                    partOne.add(arr[i]);
+                    partOneIndex++;
+                } else {
+                    partTwo.add(arr[i]);
+                    partTwoIndex++;
+                }
+            }
+
+            if (partOneIndex > partTwoIndex) {
+                dupNum = dupNum | (1 << bitSlot);
+                arr = partOne.stream().mapToInt(Integer::intValue).toArray();
+            } else {
+                arr = partTwo.stream().mapToInt(Integer::intValue).toArray();
+            }
+
+        }
+
+        return dupNum;
+    }
+
+
+
+    /**
+     * @Description: 获取当前位的值，1 or 0
+     * @author canzuo
+     *
+     * @param num int
+     * @param bitSlot in
+     * @return int
+     */
+    private static int getBit(int num, int bitSlot) {
+        return (num >> bitSlot) & 1;
     }
 }
